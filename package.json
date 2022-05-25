@@ -1,0 +1,27 @@
+{
+  "name": "app",
+  "version": "1.1.1",
+  "description": "api rest",
+  "main": "index.js",
+  "scripts": {
+    "dev": "nodemon server.js",
+    "test": "mocha"
+  },
+  "author": "edgar",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^0.27.2",
+    "chai": "^4.3.6",
+    "chai-http": "^4.3.0",
+    "circular-json": "^0.5.9",
+    "express": "^4.18.1",
+    "mocha": "^10.0.0",
+    "mongoose": "^6.3.4",
+    "node-cache": "^5.1.2",
+    "node-fetch": "^2.6.6",
+    "save-dev": "^0.0.1-security"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.16"
+  }
+}
