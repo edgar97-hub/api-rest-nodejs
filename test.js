@@ -68,7 +68,7 @@ chai.use(chaiHttp);
     it('Server should send in response that direction parameter is invalid', (done) => {
 
       chai.request(server)
-          .get('/api/posts?tags=history,tech&sortBy=likess')
+          .get('/api/posts?tags=history,tech&sortBy=likess&direction=w')
           .end((err, res) => {
                 res.should.have.status(400);
                 res.body.should.be.a('Object');

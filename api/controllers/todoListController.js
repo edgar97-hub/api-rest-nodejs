@@ -1,11 +1,10 @@
 'use strict';
 
 var fetch = require('node-fetch');
-var CircularJSON = require('circular-json');
-const NodeCache = require('node-cache');
-
-const myCache = new NodeCache({ stdTTL: 600 });
-var api_hatchways = "https://api.hatchways.io/assessment/blog/posts?tag="
+var circularJSON = require('circular-json');
+const nodeCache = require('node-cache');
+const myCache = new nodeCache({ stdTTL: 600 });
+var apiHatchways = "https://api.hatchways.io/assessment/blog/posts?tag="
 
   /**
    *  Get posts by tag and node cache for the request in parallel
@@ -13,8 +12,6 @@ var api_hatchways = "https://api.hatchways.io/assessment/blog/posts?tag="
    */
 
 exports.all_posts = function(req, res) {
-
-  let posts = myCache.get('allPosts');
 
     var tags = req.query.tags;
 
@@ -24,65 +21,44 @@ exports.all_posts = function(req, res) {
         var sortBy = req.query.sortBy;
         var direction = req.query.direction;
 
-        var sortBy_field = "id";
-        var direction_by = "asc";
+        var sortByField = "id";
+        var directionBy = "asc";
 
         // If there is the "Sortby" field, we validate that you have no spaces
 
-        if((sortBy) && !(/^\s*$/.test(sortBy))){
+        if((sortBy) && !(checkHasSpaces(sortBy))){
 
           // Validate that the field is a string and exists within the predertaminated values array
 
-          var type = ((Number(sortBy).toString() == "NaN")? "string" : "number" );
+          var type = checkIsString(sortBy);
           sortBy = sortBy.replace(/\s+/g, '');
 
           if(type != "string"  || !(["id", "reads", "likes","popularity"].includes(sortBy)) ){
 
             return res.status(400).send({"error": "sortBy parameter is invalid"})
           }
-          sortBy_field = sortBy;
+          sortByField = sortBy;
         }
         
         // If there is the "direction" field, we validate that you have no spaces
-        if( (direction) && !(/^\s*$/.test(direction))){
+        if( (direction) && !(checkHasSpaces(direction))){
                  
           // Validate that the field is a string and exists within the predertaminated values array
 
-          var type = ((Number(direction).toString() == "NaN")? "string" : "number" );
+          var type = checkIsString(direction);
           direction = direction.replace(/\s+/g, '');
 
           if(type != "string"  || !(["desc", "asc"].includes(direction)) ){
 
             return res.status(400).send({"error": "direction parameter is invalid"})
           }
-          direction_by = direction;
+          directionBy = direction;
 
         }
 
         // Function for the all request in parallel
         async function getPostData() {
 
-
-            async function request(id) {
-
-              // Temporary cache implement
-              var post = myCache.get('posts?tag=' +id);
-
-              if (post == null) {
-
-                var response = await fetch(api_hatchways + id);
-                response = await response.json();
-                myCache.set('posts?tag=' +id, response, 300);
-                return  response;
-
-              }else{ 
-
-                return post;
-
-              }
-            }
-
-          
             try {
 
               // Validate that the values within tags do not have spaces
@@ -94,7 +70,7 @@ exports.all_posts = function(req, res) {
 
               // We make parallel requests 
 
-              var fetchReq = array.map((id) => request(id) );
+              var fetchReq = array.map((value) => request(value) );
               var allData = await Promise.all(fetchReq);
                 
               // The result is combined in just array
@@ -108,10 +84,10 @@ exports.all_posts = function(req, res) {
 
               // We eliminate duplicate posts in reference to the post ID
 
-              const uniqueIds = [];
+              var uniqueIds = [];
 
-              const unique = CombinedObjects.filter(element => {
-                const isDuplicate = uniqueIds.includes(element.id);
+              var unique = CombinedObjects.filter(element => {
+              var isDuplicate = uniqueIds.includes(element.id);
               
                 if (!isDuplicate) {
                   uniqueIds.push(element.id);
@@ -125,18 +101,11 @@ exports.all_posts = function(req, res) {
               // Already with the array without duplicate we proceed to order it
 
               unique.sort(function(a, b) { 
-                return (a[sortBy_field] - b[sortBy_field]) 
+                return (a[sortByField] - b[sortByField]) 
               });
 
               // The default direction is "ASC"
-
-              if(direction_by == "asc"){ 
-                
-                unique.sort((a, b) => (a[sortBy_field] > b[sortBy_field]) ? 1 : -1);
-              }else{
-                
-                unique.sort((a, b) => (a[sortBy_field] > b[sortBy_field]) ? -1 : 1);
-              }
+              unique = sortByDirection(unique , directionBy , sortByField); 
 
               return res.status(200).json({"posts": unique})
 
@@ -145,7 +114,6 @@ exports.all_posts = function(req, res) {
                 console.log(error);
             }
         }
-        
        
         getPostData();
 
@@ -154,6 +122,51 @@ exports.all_posts = function(req, res) {
       res.status(400).json({"error": "Tags parameter is required"})
 
     }
+
+
+
+    function checkIsString(value){ 
+
+      return ((Number(value).toString() == "NaN")? "string" : "number" );
+  
+    }
+
+    function checkHasSpaces(value){ 
+  
+      return (/^\s*$/.test(value));
+    }
+
+    function sortByDirection(unique,directionBy,sortByField){ 
+  
+      if(directionBy == "asc"){ 
+                  
+        unique.sort((a, b) => (a[sortByField] > b[sortByField]) ? 1 : -1);
+      }else{
+        
+        unique.sort((a, b) => (a[sortByField] > b[sortByField]) ? -1 : 1);
+      }
+      return unique;
+    }
+
+    async function request(id) {
+  
+      // Temporary cache implement
+      var post = myCache.get('posts?tag=' +id);
+  
+      if (post == null) {
+  
+        var response = await fetch(apiHatchways + id);
+        response = await response.json();
+        myCache.set('posts?tag=' +id, response, 300);
+        return  response;
+  
+      }else{ 
+  
+        return post;
+      }
+
+    }
+
      
   };
 
